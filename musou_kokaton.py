@@ -323,7 +323,7 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
             # 防御壁の発動（sキーで発動）
-            if key_lst[pg.K_s] and score.value > -5000 and S==0:
+            if key_lst[pg.K_s] and score.value > 50 and S==0:
                 shields.add(Shield(bird,400))
                 S+=1
                 score.value-=50
