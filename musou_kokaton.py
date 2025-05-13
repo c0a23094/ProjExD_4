@@ -307,6 +307,34 @@ class Shield(pg.sprite.Sprite):
             self.kill()
 
         
+class Grabity(pg.sprite.Sprite):
+    """
+    重力場を発生させるクラス
+    """
+    def __init__(self, life: int,):
+        """
+        引数life：爆発時間
+        """
+        super().__init__()
+        self.image = pg.Surface((WIDTH, HEIGHT))       
+        self.image.set_alpha(100)
+        self.rect = self.image.get_rect()
+        pg.draw.rect(self.image, (0, 0, 0), pg.Rect(0, 0, WIDTH, HEIGHT))
+        self.life = life
+        self.rect.center = (WIDTH/2, HEIGHT/2)
+
+    def update(self,):
+        """
+        爆発時間を1減算し、0未満になったらkillする
+        """
+        self.life -= 1
+
+        if self.life < 0:
+            self.kill()
+
+
+
+
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -323,6 +351,7 @@ def main():
     # 防御壁が存在するかどうか
     global S 
     S = 0
+    gravitys = pg.sprite.Group()
 
     tmr = 0
     clock = pg.time.Clock()
@@ -340,6 +369,9 @@ def main():
                 score.value-=50
 
                 
+            if ((key_lst[pg.K_g]) and (score.value > 200)):
+                score.value -= 200
+                gravitys.add(Grabity(400))
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -352,7 +384,7 @@ def main():
 
         for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():  # ビームと衝突した敵機リスト
             exps.add(Explosion(emy, 100))  # 爆発エフェクト
-            score.value += 10  # 10点アップ
+            score.value += 10 # 10点アップ
             bird.change_img(6, screen)  # こうかとん喜びエフェクト
 
         for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
@@ -369,6 +401,13 @@ def main():
         # 防御壁に衝突した爆弾の削除
         for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():
             exps.add(Explosion(bomb, 50))
+        for bomb in pg.sprite.groupcollide(bombs, gravitys, True, False).keys():  # ビームと衝突した爆弾リスト
+            exps.add(Explosion(bomb, 50))
+            bird.change_img(6, screen)
+        
+        for emy in pg.sprite.groupcollide(emys, gravitys, True, False).keys():  # ビームと衝突した敵機リスト
+            exps.add(Explosion(emy, 100)) 
+            bird.change_img(6, screen)
 
         bird.update(key_lst, screen)
         beams.update()
@@ -383,6 +422,8 @@ def main():
         # 防御壁
         shields.update()
         shields.draw(screen)
+        gravitys.update()        
+        gravitys.draw(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
