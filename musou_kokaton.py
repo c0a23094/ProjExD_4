@@ -241,6 +241,61 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class Shield(pg.sprite.Sprite):
+    """
+    防御壁に関するクラス
+    こうかとんの前に防御壁を出現させ、着弾を防ぐ
+    """
+    def __init__(self, bird :Bird, life :int):
+        """
+        防御壁のSurfaceを生成
+        引数1 bird :こうかとん（bird）のインスタンス
+        引数2 life :防御壁の発動時間
+        """
+        super().__init__()
+        x, y = bird.rect.size
+        self.muki = {
+            (+1, 0):  (bird.rect.centerx + x , bird.rect.centery ),  # 右
+
+            (+1, -1): (bird.rect.centerx + x , bird.rect.centery - y),  # 右上
+            
+            (0, -1):  (bird.rect.centerx , bird.rect.centery - y ),  # 上
+            
+            (-1, -1): (bird.rect.centerx - x , bird.rect.centery - y ),  # 左上
+            
+            (-1, 0):  (bird.rect.centerx - x , bird.rect.centery  ),  # 左
+            
+            (-1, +1): (bird.rect.centerx - x , bird.rect.centery + y ),  # 左下
+            
+            (0, +1):  (bird.rect.centerx  , bird.rect.centery + y*2 ),  # 下
+            
+            (+1, +1): (bird.rect.centerx + x , bird.rect.centery + y ),  # 右下
+        }
+        #Surfaceを生成
+        self.image = pg.Surface((20, bird.rect.height*2))
+        #Rect生成
+        self.rect = self.image.get_rect()
+        #青い短形を生成し、回転させる
+        pg.draw.rect(self.image, (0, 0, 255), (0,0,20,bird.rect.height*2))
+        vx, vy = bird.dire
+        angle = math.degrees(math.atan2(-vy,vx))
+        self.image = pg.transform.rotozoom(self.image, angle, 0.9)
+        self.image.set_colorkey((0,0,0))
+        self.rect.center = self.muki[bird.dire]
+        self.life = life
+
+    def update(self):
+        """
+        防御壁の更新
+        引数 screen: 画面Surface
+        """
+        global S
+        self.life-=1
+        if self.life < 0:
+            S-=1
+            self.kill()
+
+        
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -253,6 +308,10 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    shields = pg.sprite.Group()
+    # 防御壁が存在するかどうか
+    global S 
+    S = 0
 
     tmr = 0
     clock = pg.time.Clock()
@@ -263,6 +322,13 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            # 防御壁の発動（sキーで発動）
+            if key_lst[pg.K_s] and score.value > -5000 and S==0:
+                shields.add(Shield(bird,400))
+                S+=1
+                score.value-=50
+
+                
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -288,6 +354,10 @@ def main():
             pg.display.update()
             time.sleep(2)
             return
+        
+        # 防御壁に衝突した爆弾の削除
+        for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():
+            exps.add(Explosion(bomb, 50))
 
         bird.update(key_lst, screen)
         beams.update()
@@ -299,6 +369,9 @@ def main():
         exps.update()
         exps.draw(screen)
         score.update(screen)
+        # 防御壁
+        shields.update()
+        shields.draw(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
